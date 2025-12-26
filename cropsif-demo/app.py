@@ -20,7 +20,7 @@ DOY_LABELS = {177: "Jun 25", 185: "Jul 3", 193: "Jul 11", 201: "Jul 19", 209: "J
 @st.cache_data
 def load_sif_data(year, doy):
     """Load Iowa SIF data"""
-    filepath = f"data/GOSIF_{year}{doy}.tif"
+    filepath = f"cropsif-demo/data/GOSIF_{year}{doy}.tif"
     if not os.path.exists(filepath):
         return None
     
