@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import rasterio
-from shapely.geometry import box
 import os
 
 # Page config
@@ -30,16 +29,15 @@ def load_sif_data(year, doy):
         data = np.where(valid, data, np.nan)
         return data
 
-@st.cache_data
 def get_timeseries(year):
     """Get July timeseries for a year"""
     values = []
     for doy in JULY_DOYS:
         data = load_sif_data(year, doy)
         if data is not None:
-            values.append(np.nanmean(data))
+            values.append(float(np.nanmean(data)))
         else:
-            values.append(None)
+            values.append(np.nan)
     return values
 
 # Header
@@ -63,8 +61,8 @@ sif_2023 = load_sif_data(2023, selected_doy)
 col1, col2, col3, col4 = st.columns(4)
 
 if sif_2012 is not None and sif_2023 is not None:
-    mean_2012 = np.nanmean(sif_2012)
-    mean_2023 = np.nanmean(sif_2023)
+    mean_2012 = float(np.nanmean(sif_2012))
+    mean_2023 = float(np.nanmean(sif_2023))
     pct_diff = ((mean_2012 - mean_2023) / mean_2023) * 100
     
     col1.metric("2023 SIF (Normal)", f"{mean_2023:.3f}", "Baseline")
@@ -130,21 +128,23 @@ with left_col:
 with right_col:
     st.subheader("📈 July Time Series")
     
+    # Get timeseries data
     ts_2012 = get_timeseries(2012)
     ts_2023 = get_timeseries(2023)
     
     fig3, ax = plt.subplots(figsize=(10, 5))
     
-    # Convert None to np.nan for plotting
-    ts_2012_clean = [v if v is not None else np.nan for v in ts_2012]
-    ts_2023_clean = [v if v is not None else np.nan for v in ts_2023]
+    ax.plot(JULY_DOYS, ts_2023, 'g-o', linewidth=2, markersize=10, label='2023 (Normal)')
+    ax.plot(JULY_DOYS, ts_2012, 'r-s', linewidth=2, markersize=10, label='2012 (Drought)')
     
-    ax.plot(JULY_DOYS, ts_2023_clean, 'g-o', linewidth=2, markersize=10, label='2023 (Normal)')
-    ax.plot(JULY_DOYS, ts_2012_clean, 'r-s', linewidth=2, markersize=10, label='2012 (Drought)')
-    
-    # Only fill if we have valid data
-    if all(v is not None for v in ts_2012) and all(v is not None for v in ts_2023):
-        ax.fill_between(JULY_DOYS, ts_2012_clean, ts_2023_clean, alpha=0.3, color='red')
+    # Fill between with error handling
+    try:
+        ts_2012_arr = np.array(ts_2012, dtype=float)
+        ts_2023_arr = np.array(ts_2023, dtype=float)
+        if not np.any(np.isnan(ts_2012_arr)) and not np.any(np.isnan(ts_2023_arr)):
+            ax.fill_between(JULY_DOYS, ts_2012_arr, ts_2023_arr, alpha=0.3, color='red')
+    except:
+        pass
     
     ax.axvline(x=selected_doy, color='blue', linestyle='--', alpha=0.5, label='Selected Date')
     
@@ -164,15 +164,21 @@ with right_col:
     st.subheader("📊 Period Statistics")
     stats_data = []
     for i, doy in enumerate(JULY_DOYS):
-        if ts_2012[i] and ts_2023[i]:
-            diff = ((ts_2012[i] - ts_2023[i]) / ts_2023[i]) * 100
+        val_2012 = ts_2012[i]
+        val_2023 = ts_2023[i]
+        if not np.isnan(val_2012) and not np.isnan(val_2023):
+            diff = ((val_2012 - val_2023) / val_2023) * 100
             stats_data.append({
                 "Date": DOY_LABELS[doy],
-                "2023 SIF": f"{ts_2023[i]:.4f}",
-                "2012 SIF": f"{ts_2012[i]:.4f}",
+                "2023 SIF": f"{val_2023:.4f}",
+                "2012 SIF": f"{val_2012:.4f}",
                 "Anomaly": f"{diff:+.1f}%"
             })
-    st.table(stats_data)
+    
+    if stats_data:
+        st.table(stats_data)
+    else:
+        st.warning("No data available")
 
 st.markdown("---")
 st.markdown("""
