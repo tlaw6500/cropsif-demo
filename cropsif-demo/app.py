@@ -135,9 +135,17 @@ with right_col:
     
     fig3, ax = plt.subplots(figsize=(10, 5))
     
-    ax.plot(JULY_DOYS, ts_2023, 'g-o', linewidth=2, markersize=10, label='2023 (Normal)')
-    ax.plot(JULY_DOYS, ts_2012, 'r-s', linewidth=2, markersize=10, label='2012 (Drought)')
-    ax.fill_between(JULY_DOYS, ts_2012, ts_2023, alpha=0.3, color='red')
+    # Convert None to np.nan for plotting
+    ts_2012_clean = [v if v is not None else np.nan for v in ts_2012]
+    ts_2023_clean = [v if v is not None else np.nan for v in ts_2023]
+    
+    ax.plot(JULY_DOYS, ts_2023_clean, 'g-o', linewidth=2, markersize=10, label='2023 (Normal)')
+    ax.plot(JULY_DOYS, ts_2012_clean, 'r-s', linewidth=2, markersize=10, label='2012 (Drought)')
+    
+    # Only fill if we have valid data
+    if all(v is not None for v in ts_2012) and all(v is not None for v in ts_2023):
+        ax.fill_between(JULY_DOYS, ts_2012_clean, ts_2023_clean, alpha=0.3, color='red')
+    
     ax.axvline(x=selected_doy, color='blue', linestyle='--', alpha=0.5, label='Selected Date')
     
     ax.set_xlabel('Day of Year', fontsize=12)
